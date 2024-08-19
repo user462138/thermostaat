@@ -10,6 +10,7 @@ public class Thermostat
 {
     private readonly ITemperatureSensor temperatureSensor;
     private readonly IHeatingElement heatingElement;
+    private int failures = 0;
 
     private double setpoint;
     public double Setpoint
@@ -25,6 +26,19 @@ public class Thermostat
         set { offset = value; }
     }
 
+    private int maxFailures;
+
+    public int MaxFailures
+    {
+        get { return maxFailures; }
+        set { maxFailures = value; }
+    }
+
+    public bool InSafeMode
+    {
+        get { return (failures < MaxFailures) ? false : true; }
+    }
+
     public Thermostat(ITemperatureSensor temperatureSensor, IHeatingElement heatingElement)
     {
         this.temperatureSensor = temperatureSensor;
@@ -33,31 +47,50 @@ public class Thermostat
 
     public void Work()
     {
-        double temperature = temperatureSensor.GetTemperature();
+        try
+        {
+            double temperature = temperatureSensor.GetTemperature();
+            // reset number of failures
+            failures = 0;
 
-        // temperature between boudaries 
-        if (temperature > Setpoint - Offset && temperature < Setpoint + Offset)
+            // temperature between boundaries 
+            if (temperature > Setpoint - Offset && temperature < Setpoint + Offset)
+            {
+                // Do nothing
+            }
+            // temperature less than lower boundary 
+            else if (temperature < Setpoint - Offset)
+            {
+                heatingElement.Enable();
+            }
+            // temperature eqauls lower boundary 
+            else if (temperature == Setpoint - Offset)
+            {
+                // Do nothing
+            }
+            // temperature higher than upper boundary 
+            else if (temperature > Setpoint + Offset)
+            {
+                heatingElement.Disable();
+            }
+            // temperature eqauls upper boundary 
+            else if (temperature == Setpoint + Offset)
+            {
+                // Do nothing
+            }
+            else
+            {
+                // Do nothing
+            }
+        }
+        catch
         {
+            failures++;
             // Do nothing
-        }
-        // temperature less than lower boudary 
-        else if (temperature < Setpoint - Offset)
-        {
-            heatingElement.Enable();
-        }
-        // temperature equals lower boudary
-        else if (temperature == Setpoint - Offset)
-        {
-            // Do nothing
-        }
-        // temperature equals lower boudary
-        else if (temperature > Setpoint + Offset)
-        {
-            heatingElement.Disable();
-        }
-        else if (temperature == Setpoint + Offset)
-        {
-            // Do nothing
+            if (failures >= MaxFailures)
+            {
+                heatingElement.Disable();
+            }
         }
     }
 }

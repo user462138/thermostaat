@@ -24,7 +24,8 @@ namespace thermostaat.UnitTests
             {
                 // Set the setpoint and offset
                 Setpoint = 20.0,
-                Offset = 2.0
+                Offset = 2.0,
+                MaxFailures = 2
             };
         }
 
@@ -164,28 +165,63 @@ namespace thermostaat.UnitTests
         [TestMethod]
         public void WorkWhenTemperatureFailsAndNotInsafeModeDoNothing()
         {
-            // --- Arrange ---
-            // Mock the objects used by the Thermostat object
-            //Mock<ITemperatureSensor> temperatureSensorMock = new Mock<ITemperatureSensor>();
-            //Mock<IHeatingElement> heatingElementMock = new Mock<IHeatingElement>();
+            temperatureSensorMock.Setup(x => x.GetTemperature()).Returns(20.0);
+            thermostat.Work();
 
-            // Create the test object
-            Thermostat thermostat = new Thermostat(temperatureSensorMock.Object, heatingElementMock.Object);
-
-            // Set the setpoint and offset
-            thermostat.Setpoint = 20.0;
-            thermostat.Offset = 2.0;
-
-            // Configure the mock object to get the temperature less than lower boundary = 17.0
-            temperatureSensorMock.Setup(x => x.GetTemperature()).Returns(22);
+            // Configure the mock object to getting the temperature throws an exception
+            temperatureSensorMock.Setup(x => x.GetTemperature()).Throws<Exception>();
 
             // --- Act ---
             thermostat.Work();
 
             // --- Assert ---
             // Verify that neither the method Enable nor the method Disable of the heatingElementMock object is called (= Do Nothing)
+            Assert.IsFalse(thermostat.InSafeMode);
             heatingElementMock.Verify(x => x.Enable(), Times.Never);
             heatingElementMock.Verify(x => x.Disable(), Times.Never);
+        }
+
+        [TestMethod]
+        public void WorkWhenTemperatureFailsAndMaxFailuresInSafeMode()
+        {
+
+            // Configure the mock object to getting the temperature throws an exception
+            temperatureSensorMock.Setup(x => x.GetTemperature()).Throws<Exception>();
+
+            for (int i = 1; i < thermostat.MaxFailures; i++)
+            {
+                thermostat.Work();
+            }
+
+            // --- Act ---
+            thermostat.Work();
+
+            // --- Assert ---
+            // Verify that neither the method Enable nor the method Disable of the heatingElementMock object is called (= Do Nothing)
+            Assert.IsTrue(thermostat.InSafeMode);
+            heatingElementMock.Verify(x => x.Enable(), Times.Never);
+            heatingElementMock.Verify(x => x.Disable(), Times.Once);
+        }
+
+        [TestMethod]
+        public void WorkWhenInSafeModeAndTemperatureSuccesReset()
+        {
+
+            // Configure the mock object to getting the temperature throws an exception
+            temperatureSensorMock.Setup(x => x.GetTemperature()).Throws<Exception>();
+
+            for (int i = 1; i < thermostat.MaxFailures; i++)
+            {
+                thermostat.Work();
+            }
+
+            temperatureSensorMock.Setup(x => x.GetTemperature()).Returns(20.0);
+            // --- Act ---
+            thermostat.Work();
+
+            // --- Assert ---
+            // Verify that neither the method Enable nor the method Disable of the heatingElementMock object is called (= Do Nothing)
+            Assert.IsFalse(thermostat.InSafeMode);
         }
     }
 }
