@@ -12,6 +12,12 @@ public class Thermostat
     private readonly IHeatingElement heatingElement;
     private int failures = 0;
 
+    public string Url
+    {
+        get { throw new NotImplementedException(); }
+        set { throw new NotImplementedException(); }
+    }
+
     private double setpoint;
     public double Setpoint
     {

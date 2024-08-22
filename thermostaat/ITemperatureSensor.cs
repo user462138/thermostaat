@@ -8,5 +8,6 @@ namespace HeaterSystem;
 
 public interface ITemperatureSensor
 {
+    string Url { get; set; }
     double GetTemperature();
 }
